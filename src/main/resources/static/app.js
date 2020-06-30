@@ -9,12 +9,16 @@ var gameMessage = null;
 function setConnected(connected) {
     $("#connect").prop("disabled", connected);
     $("#disconnect").prop("disabled", !connected);
+    $('#start').prop('disabled', !connected);
+    $('#username').prop('disabled', connected);
+
     if (connected) {
         $("#conversation").show();
+        $('#start').prop('disabled', true).hide();
     } else {
         $("#conversation").hide();
     }
-    $("#greetings").html("");
+    $("#gameBoard").html("");
 }
 
 function connect() {
@@ -25,14 +29,15 @@ function connect() {
         username: username
     }, function (frame) {
         setConnected(true);
-        console.log('Connected: ' + frame);
-        stompClient.subscribe('/topic/greetings', function (greeting) {
-            showGreeting(JSON.parse(greeting.body).content);
-        });
 
+        start();
         stompClient.subscribe('/user/queue/updates', function (response) {
             gameMessage = JSON.parse(response.body);
             processGameMessage();
+        });
+
+        stompClient.subscribe('/user/queue/errors', function (response) {
+            console.log(response.body);
         });
 
     }, function (error) {
@@ -46,29 +51,16 @@ function disconnect() {
         stompClient.disconnect();
     }
     setConnected(false);
-    console.log("Disconnected");
+    primaryPlayer = false;
 }
 
-function showGreeting(message) {
-    $("#greetings").prepend("<tr><td>" + message + "</td></tr>");
+function showMessage(message) {
+    $("#gameBoard").prepend('<tr><td colspan="2">' + message + '</td></tr>');
 }
 
 function start() {
+    $('#gameBoard').html('');
     stompClient.send('/app/game.start', {});
-}
-
-function play(value, addition) {
-    if ((value + addition) % 3 != 0) {
-        //todo: show error message
-    }
-    var message = {
-        type: 'PLAY',
-        coplayer: opponent,
-        value: value,
-        play: play
-    };
-
-    stompClient.send('/app/game.play', {}, message);
 }
 
 //todo: change function name
@@ -85,10 +77,8 @@ function getAddition(value) {
 }
 
 function updateGameMode() {
-    if (!gameStarted) {
-        return;
-    }
-    isAutomatic = $('option:selected', this).text() === 'AUTOMATIC';
+
+    isAutomatic = $('#mode option:selected').text() === 'AUTOMATIC';
     if (!isAutomatic) {
         if (primaryPlayer) {
             $('#randomNumberSection').show();
@@ -98,53 +88,53 @@ function updateGameMode() {
         $('#randomNumberSection').hide();
         $('#additionSelector').hide();
     }
+
 }
 
 function startGameSession() {
-    gameStarted = true;
-    $('#mode').change();
+    updateGameMode();
     if (primaryPlayer) {
         if (isAutomatic) {
             delay(function () {
                 var randomNumber = generateRandomNumber();
-                showGreeting('You generated the random number: ' + randomNumber);
+                showMessage('You generated the random number: ' + randomNumber);
                 sendRandomNumber(randomNumber);
             });
-
         }
     }
 }
 
 function processGameMessage() {
-    if (null == gameMessage) {
+    if (null === gameMessage) {
         return;
     }
     switch (gameMessage.gameStatus) {
         case 'WAITING':
-            showGreeting(gameMessage.content);
+            showMessage(gameMessage.content);
+            gameMessage = null;
             break;
         case 'START':
-            showGreeting("You're connected to " + gameMessage.opponent);
+            $('#gameBoard').html('');
+            $('#opponentLabel').html('[Opponent: ' + gameMessage.opponent + ']').show();
             opponent = gameMessage.opponent;
             primaryPlayer = gameMessage.primaryPlayer;
             startGameSession();
             //todo: show other form fields depending on which kind of player and game mode
             break;
         case 'PLAY':
-            makeMove(gameMessage);
+            makeMove();
             break;
         case 'GAMEOVER':
-            gameOver(gameMessage);
+            gameOver();
             break;
         case 'DISCONNECT':
-            coplayerDisconnected(gameMessage);
+            coplayerDisconnected();
             break;
     }
-    gameMessage = null;
 }
 
 function generateRandomNumber() {
-    return Math.floor(Math.random() * 100);
+    return Math.floor(Math.random() * 100) + 1;
 }
 
 function sendRandomNumber(randomNumber) {
@@ -155,39 +145,53 @@ function sendRandomNumber(randomNumber) {
     };
     console.log(message);
     stompClient.send('/app/game.number', {}, JSON.stringify(message));
+    gameMessage = null;
 }
 
-function makeMove(message) {
-    var value = message.value;
+function makeMove() {
+    var value = gameMessage.value;
     gameValue = value;
-    showGreeting(opponent + ' sent value ' + value);
+    showMessage(opponent + ' sent value ' + value);
     if (isAutomatic) {
         delay(function () {
             var addition = getAddition(value);
             sendMove(value, addition);
+            gameMessage = null;
         });
     }
 }
 
 function sendMove(value, move) {
-    showGreeting('You added ' + move + ' to ' + value + ' to make it divisible by 3');
+    showMessage('You added ' + move + ' to ' + value + ' to make it divisible by 3');
     var updatedValue = value + move;
-    showGreeting(updatedValue + ' divided by 3 = ' + updatedValue / 3);
+    showMessage(updatedValue + ' divided by 3 = ' + updatedValue / 3);
     var message = {
         value: value,
         move: move
     };
 
     stompClient.send('/app/game.play', {}, JSON.stringify(message));
+    gameMessage = null;
 }
 
-function gameOver(message) {
-    var display = message.winner ? 'You won the game :)' : 'You lost the game :(';
-    showGreeting(display);
+function gameOver() {
+    var message = gameMessage.winner ? 'You won the game :)' : 'You lost the game :(';
+    showMessage(message);
+
+    if (primaryPlayer) {
+        $('#start').prop('disabled', false).show();
+    }
+
+    gameMessage = null;
 }
 
-function coplayerDisconnected(message) {
-    showGreeting(message.content);
+function coplayerDisconnected() {
+    showMessage(gameMessage.content);
+    primaryPlayer = true;
+    $('#start').prop('disabled', false).show();
+    $('#opponentLabel').html('').hide();
+
+    gameMessage = null;
 }
 
 function delay(fn) {
@@ -215,19 +219,22 @@ function retrieveRandomNumber() {
 }
 
 $(function () {
+    setConnected(false);
+
     $("form").on('submit', function (e) {
         e.preventDefault();
     });
-    $("#connect").click(function () {
-        connect();
-    });
-    $("#disconnect").click(function () {
-        disconnect();
-    });
+
+    $("#connect").click(connect);
+    $("#disconnect").click(disconnect);
     $('#start').click(function () {
-        start()
+        start();
+        $(this).prop('disabled', true);
     });
-    $('#mode').change(updateGameMode).change();
+    $('#mode').change(function () {
+        updateGameMode();
+        processGameMessage();
+    }).change();
 
     $('#btnNumberAdder').click(addNumber);
     $('#btnRandomNumber').click(retrieveRandomNumber);
