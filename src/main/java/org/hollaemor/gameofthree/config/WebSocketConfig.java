@@ -11,6 +11,7 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.util.StringUtils;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -66,9 +67,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
             if (StompCommand.CONNECT.equals(accessor.getCommand())) {
                 Optional.ofNullable(accessor.getFirstNativeHeader(USERNAME_HEADER))
-                        .ifPresentOrElse(usernameHeader -> {
-                            String username = (String) usernameHeader;
-
+                        .filter( username -> !StringUtils.isEmpty(username))
+                        .ifPresentOrElse(username -> {
                             checkPlayerDoesNotExist(username);
                             accessor.setUser(() -> username);
 

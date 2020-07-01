@@ -1,5 +1,4 @@
 var stompClient = null;
-var isAutomatic = false;
 var opponent = null;
 var primaryPlayer = false;
 var gameStarted = false;
@@ -13,18 +12,33 @@ function setConnected(connected) {
     $('#username').prop('disabled', connected);
 
     if (connected) {
-        $("#conversation").show();
+        $("#gameplay").show();
         $('#start').prop('disabled', true).hide();
     } else {
-        $("#conversation").hide();
+        $("#gameplay").hide();
+        hideGameControls();
     }
     $("#gameBoard").html("");
 }
 
 function connect() {
+    clearError();
+
+    $('#username').removeClass('invalid');
+
+    var username = $.trim($('#username').val());
+
+    if (username.length === 0) {
+        $('#username').addClass('invalid');
+        return;
+    }
+
+
     var socket = new SockJS('/game-of-three');
     stompClient = Stomp.over(socket);
-    var username = $('#username').val();
+    stompClient.reconnect_delay = 0;
+    stompClient.debug = function (str) {};
+
     stompClient.connect({
         username: username
     }, function (frame) {
@@ -40,10 +54,7 @@ function connect() {
             console.log(response.body);
         });
 
-    }, function (error) {
-        console.log(error);
-        console.log(error.headers.message);
-    });
+    }, showError);
 }
 
 function disconnect() {
@@ -63,8 +74,7 @@ function start() {
     stompClient.send('/app/game.start', {});
 }
 
-//todo: change function name
-function getAddition(value) {
+function getNumberToMakeValueDivisibleByThree(value) {
     var modulo = value % 3;
     switch (modulo) {
         case 0:
@@ -78,36 +88,41 @@ function getAddition(value) {
 
 function updateGameMode() {
 
-    isAutomatic = $('#mode option:selected').text() === 'AUTOMATIC';
-    if (!isAutomatic) {
-        if (primaryPlayer) {
-            $('#randomNumberSection').show();
-        }
-        $('#additionSelector').show();
-    } else {
-        $('#randomNumberSection').hide();
-        $('#additionSelector').hide();
-    }
+    if (!isAutomatic()) {
 
+        if (gameMessage !== null) {
+            if (primaryPlayer && gameMessage.gameStatus === 'START') {
+                $('#randomNumberSection').show();
+            }
+
+            if (gameMessage.gameStatus === 'PLAY') {
+                $('#additionSelector').show();
+            }
+        }
+    } else {
+        hideGameControls();
+    }
 }
 
 function startGameSession() {
     updateGameMode();
-    if (primaryPlayer) {
-        if (isAutomatic) {
-            delay(function () {
-                var randomNumber = generateRandomNumber();
-                showMessage('You generated the random number: ' + randomNumber);
-                sendRandomNumber(randomNumber);
-            });
-        }
+    if (primaryPlayer && isAutomatic()) {
+        delay(function () {
+            var randomNumber = generateRandomNumber();
+            showMessage('You generated the random number: ' + randomNumber);
+            sendRandomNumber(randomNumber);
+        });
     }
+
 }
 
 function processGameMessage() {
     if (null === gameMessage) {
         return;
     }
+    clearError();
+    hideGameControls();
+
     switch (gameMessage.gameStatus) {
         case 'WAITING':
             showMessage(gameMessage.content);
@@ -119,7 +134,6 @@ function processGameMessage() {
             opponent = gameMessage.opponent;
             primaryPlayer = gameMessage.primaryPlayer;
             startGameSession();
-            //todo: show other form fields depending on which kind of player and game mode
             break;
         case 'PLAY':
             makeMove();
@@ -139,11 +153,8 @@ function generateRandomNumber() {
 
 function sendRandomNumber(randomNumber) {
     var message = {
-        coplayer: opponent,
-        type: 'PLAY',
         value: randomNumber
     };
-    console.log(message);
     stompClient.send('/app/game.number', {}, JSON.stringify(message));
     gameMessage = null;
 }
@@ -152,12 +163,14 @@ function makeMove() {
     var value = gameMessage.value;
     gameValue = value;
     showMessage(opponent + ' sent value ' + value);
-    if (isAutomatic) {
+    if (isAutomatic()) {
         delay(function () {
-            var addition = getAddition(value);
+            var addition = getNumberToMakeValueDivisibleByThree(value);
             sendMove(value, addition);
             gameMessage = null;
         });
+    } else {
+        $('#additionSelector').show();
     }
 }
 
@@ -179,18 +192,20 @@ function gameOver() {
     showMessage(message);
 
     if (primaryPlayer) {
-        $('#start').prop('disabled', false).show();
+        $('#start').prop('disabled', false).html('<i class="fas fa-sync"></i> Rematch').show();
     }
 
+    hideGameControls();
     gameMessage = null;
 }
 
 function coplayerDisconnected() {
     showMessage(gameMessage.content);
     primaryPlayer = true;
-    $('#start').prop('disabled', false).show();
+    $('#start').prop('disabled', false).html('<i class="far fa-play-circle"></i> New Game').show();
     $('#opponentLabel').html('').hide();
 
+    hideGameControls();
     gameMessage = null;
 }
 
@@ -202,20 +217,53 @@ function addNumber() {
     var selectedNumber = $('#addSelect option:selected').val();
     console.log(selectedNumber);
     var result = parseInt(gameValue) + parseInt(selectedNumber);
-    console.log(result);
 
     if (result % 3 != 0) {
-        console.error('Addition should return a number divisible by 3');
-        //todo: display error message
+        showError('Addition should return a number divisible by 3');
         return;
     }
 
     sendMove(gameValue, parseInt(selectedNumber));
+    hideGameControls();
 }
 
 function retrieveRandomNumber() {
+    $('#randomNumber').removeClass('invalid');
     var randomNumber = parseInt($('#randomNumber').val());
+    if (isNaN(randomNumber) || randomNumber <= 0) {
+        $('#randomNumber').addClass('invalid');
+        return;
+    }
     sendRandomNumber(randomNumber);
+    hideGameControls();
+}
+
+function isAutomatic() {
+    return $('#mode option:selected').text() === 'AUTOMATIC';
+}
+
+function hideGameControls() {
+    $('#randomNumberSection').hide();
+    $('#additionSelector').hide();
+}
+
+function clearError() {
+    $('#errorMessage').hide();
+}
+
+function showError(error) {
+    console.log('CALLED **');
+    console.log('Error: ', error);
+    var message = null;
+
+    if (error.headers && error.headers.message) {
+        message = error.headers.message;
+    } else {
+        message = error;
+    }
+
+    $('#errorMessage span').html(message);
+    $('#errorMessage').show();
 }
 
 $(function () {

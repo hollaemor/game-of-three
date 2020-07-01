@@ -9,6 +9,13 @@
     <script src="/webjars/sockjs-client/sockjs.min.js"></script>
     <script src="/webjars/stomp-websocket/stomp.min.js"></script>
     <script src="/app.js"></script>
+    <script src="https://kit.fontawesome.com/0420ec2839.js" crossorigin="anonymous"></script>
+
+    <style type="text/css">
+        .invalid {
+            border: 1px solid red;
+        }
+    </style>
 </head>
 
 <body>
@@ -32,17 +39,25 @@
                             <option>AUTOMATIC</option>
                         </select>
                     </div>
-                    <button id="connect" class="btn btn-default" type="submit">Connect</button>
+                    <button id="connect" class="btn btn-default" type="submit"><i class="fas fa-plug"></i>
+                        Connect</button>
                 </form>
             </div>
 
             <div class="col-md-1">
                 <form class="form-inline">
                     <div class="form-group">
-                        <button id="disconnect" class="btn btn-default" type="submit" disabled="disabled">Disconnect
+                        <button id="disconnect" class="btn btn-default" type="submit" disabled="disabled"><i
+                                class="fas fa-sign-out-alt"></i> Disconnect
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="alert alert-warning col-md-12" role="alert" id="errorMessage" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> <span></span>
             </div>
         </div>
 
@@ -53,7 +68,8 @@
                         <label for="randomNumber">Random Number:</label>
                         <input type="number" id="randomNumber" class="form-control">
                     </div>
-                    <button class="btn btn-default" id="btnRandomNumber" type="submit">Send</button>
+                    <button class="btn btn-default" id="btnRandomNumber" type="submit"><i class="fas fa-random"></i>
+                        Send</button>
                 </form>
             </div>
         </div>
@@ -69,13 +85,14 @@
                             <option value="1"> 1 </option>
                         </select>
                     </div>
-                    <button class="btn btn-default" id="btnNumberAdder" type="submit"> Add Number</button>
+                    <button class="btn btn-default" id="btnNumberAdder" type="submit"><i class="fas fa-plus"></i>
+                        Add</button>
                 </form>
             </div>
         </div>
         <div class="row">
             <div class="col-md-12">
-                <table id="conversation" class="table table-striped">
+                <table id="gameplay" class="table table-striped">
                     <thead>
                         <tr>
                             <th style="width:80%;">Game Play <strong id="opponentLabel"></strong></th>
