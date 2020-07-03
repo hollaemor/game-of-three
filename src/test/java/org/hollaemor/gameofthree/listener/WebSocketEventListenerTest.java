@@ -1,16 +1,18 @@
 package org.hollaemor.gameofthree.listener;
 
-import org.hollaemor.gameofthree.model.Player;
-import org.hollaemor.gameofthree.service.PlayerService;
+import org.hollaemor.gameofthree.gaming.domain.Player;
+import org.hollaemor.gameofthree.gaming.service.PlayerService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+
+import java.util.HashMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -24,9 +26,6 @@ public class WebSocketEventListenerTest {
 
     @Mock
     private SessionConnectedEvent sessionConnectedEvent;
-
-    @Mock
-    private SessionDisconnectEvent sessionDisconnectEvent;
 
     @InjectMocks
     private WebSocketEventListener listener;
@@ -50,4 +49,22 @@ public class WebSocketEventListenerTest {
         assertThat(playerCaptor.getValue().getName()).isEqualTo("Sheldon");
     }
 
+    @Test
+    public void whenSessionIsDisconnected_Then_PlayerIsRemoved() {
+        // given
+        var sessionMap = new HashMap<String, Object>();
+        sessionMap.put("username", "Penny");
+
+        var message = MessageBuilder.withPayload(new byte[0])
+                .setHeader(StompHeaderAccessor.SESSION_ATTRIBUTES, sessionMap)
+                .build();
+
+        var sessionDisconnectEvent = new SessionDisconnectEvent(new Object(), message, "sessionId", CloseStatus.NORMAL);
+
+        // when
+        listener.handleWebSocketDisconnected(sessionDisconnectEvent);
+
+        // then
+        verify(playerService).removePlayer(BDDMockito.eq("Penny"));
+    }
 }

@@ -1,0 +1,23 @@
+body {
+  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+
+.invalid {
+  border: 1px solid #e6522c;
+}
+
+.row {
+  margin-bottom: 20px;
+}
+
+#header {
+  font-size: 4em;
+  font-weight: bold;
+  word-spacing: -0.1em;
+  text-shadow: 1px 1px black;
+  color: #e6522c;
+}
+
+#opponentLabel span {
+  color: #e6522c;
+}
