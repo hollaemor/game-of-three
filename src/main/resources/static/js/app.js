@@ -11,7 +11,7 @@ calls the error callback twice during a failure. The second call overrides
 the message I will like to display.
 This variable is being used as a hack to capture the original message
 */
-var headerErrorMesssage = null;
+var headerErrorMessage = null;
 
 function setConnected(connected) {
     $("#connect").prop("disabled", connected);
@@ -158,7 +158,7 @@ function processGameMessage() {
             gameOver();
             break;
         case 'DISCONNECT':
-            coplayerDisconnected();
+            opponentDisconnected();
             break;
     }
 }
@@ -219,7 +219,7 @@ function gameOver() {
     gameMessage = null;
 }
 
-function coplayerDisconnected() {
+function opponentDisconnected() {
     showMessage(gameMessage.content);
     primaryPlayer = true;
     $('#start').prop('disabled', false).html('<i class="far fa-play-circle"></i> New Game').show();
@@ -268,18 +268,18 @@ function hideGameControls() {
 }
 
 function clearError() {
-    headerErrorMesssage = null;
+    headerErrorMessage = null;
     $('#errorMessage').hide();
 }
 
 function showError(error) {
 
     if (error.headers && error.headers.message) {
-        headerErrorMesssage = error.headers.message;
+        headerErrorMessage = error.headers.message;
     }
 
-    if (headerErrorMesssage !== null) {
-        $('#errorMessage span').html(headerErrorMesssage);
+    if (headerErrorMessage !== null) {
+        $('#errorMessage span').html(headerErrorMessage);
     } else {
         $('#errorMessage span').html(error);
     }

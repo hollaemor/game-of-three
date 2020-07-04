@@ -2,7 +2,6 @@ package org.hollaemor.gameofthree.gaming.service;
 
 import org.hollaemor.gameofthree.gaming.datatransfer.GameMessage;
 import org.hollaemor.gameofthree.gaming.datatransfer.GameStatus;
-import org.hollaemor.gameofthree.gaming.datatransfer.PlayerDto;
 import org.hollaemor.gameofthree.gaming.domain.Player;
 import org.hollaemor.gameofthree.gaming.storage.PlayerStore;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -10,12 +9,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
-import static java.util.stream.Collectors.toList;
-
 @Service
 public class PlayerService {
-
-    private static final String USER_TOPIC = "/topic/users";
 
     private static final String UPDATES_QUEUE = "/queue/updates";
 
@@ -30,7 +25,6 @@ public class PlayerService {
 
     public void save(Player player) {
         playerStore.save(player);
-        publishOnlinePlayers();
     }
 
 
@@ -39,7 +33,6 @@ public class PlayerService {
                 .ifPresent(player -> {
                     playerStore.delete(player);
                     updateAndNotifyPlayer(player.getOpponent());
-                    publishOnlinePlayers();
                 });
     }
 
@@ -59,9 +52,5 @@ public class PlayerService {
                 .content(String.format("%s disconnected from game", disconnectedPlayerName))
                 .build();
         messagingTemplate.convertAndSendToUser(player.getName(), UPDATES_QUEUE, message);
-    }
-
-    private void publishOnlinePlayers() {
-        messagingTemplate.convertAndSend(USER_TOPIC, playerStore.getPlayers().stream().map(player -> new PlayerDto(player.getName(), player.getStatus())).collect(toList()));
     }
 }

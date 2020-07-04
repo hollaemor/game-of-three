@@ -1,10 +1,9 @@
 package org.hollaemor.gameofthree.gaming.api;
 
-import org.hollaemor.gameofthree.gaming.exception.PlayerNotFoundException;
 import org.hollaemor.gameofthree.gaming.datatransfer.GameInstruction;
 import org.hollaemor.gameofthree.gaming.datatransfer.GameMessage;
 import org.hollaemor.gameofthree.gaming.datatransfer.GameStatus;
-import org.hollaemor.gameofthree.gaming.domain.Player;
+import org.hollaemor.gameofthree.gaming.exception.PlayerNotFoundException;
 import org.hollaemor.gameofthree.gaming.service.GameService;
 import org.hollaemor.gameofthree.gaming.storage.PlayerStore;
 import org.junit.jupiter.api.BeforeEach;
@@ -103,13 +102,11 @@ public class GameControllerIntegrationTest {
     }
 
     @Test
-    public void startEndpoint_Should_PublishToUserUpdatesQueue() throws Exception {
+    public void startEndpoint_Should_CallGameService() throws Exception {
 
         // given
         given(gameService.startForPlayer(anyString()))
                 .willReturn(GameMessage.builder().gameStatus(GameStatus.WAITING).build());
-
-        given(playerStore.getPlayers()).willReturn(List.of(new Player("Samson")));
 
         // when
         StompSession stompSession = createSession(new MappingJackson2MessageConverter());

@@ -23,11 +23,6 @@ public class InMemoryPlayerStore implements PlayerStore {
     }
 
     @Override
-    public Collection<Player> getPlayers() {
-        return store.values();
-    }
-
-    @Override
     public Optional<Player> findByName(String playerName) {
         return store.containsKey(playerName) ? Optional.of(store.get(playerName)) : Optional.empty();
     }

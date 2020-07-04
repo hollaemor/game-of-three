@@ -18,19 +18,6 @@ public class InMemoryPlayerStoreTest {
         store = new InMemoryPlayerStore();
     }
 
-    @Test
-    public void saveShouldPersistUser() {
-        // given
-        var player = new Player("Player One");
-
-        // when
-        store.save(player);
-
-        // then
-        assertThat(store.getPlayers()).hasSize(1);
-        assertThat(store.getPlayers()).containsExactly(player);
-    }
-
 
     @Test
     public void findByNameShouldReturnPlayerWithName() {
@@ -55,13 +42,13 @@ public class InMemoryPlayerStoreTest {
         var littleFinger = new Player("Little Finger");
         store.save(littleFinger);
 
-        assertThat(store.getPlayers()).hasSize(1);
-
+        assertThat(store.findByName("Little Finger")).isPresent();
+        assertThat(store.findByName("Little Finger")).hasValue(littleFinger);
         // when
         store.delete(littleFinger);
 
         // then
-        assertThat(store.getPlayers()).isEmpty();
+        assertThat(store.findByName("Little Finger")).isNotPresent();
     }
 
     @Test
