@@ -22,7 +22,7 @@ import java.util.Optional;
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    public final static String USERNAME_HEADER = "username";
+    public static final String USERNAME_HEADER = "username";
 
     private final PlayerStore playerStore;
 

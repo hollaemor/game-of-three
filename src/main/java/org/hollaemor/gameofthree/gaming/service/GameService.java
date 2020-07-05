@@ -12,6 +12,7 @@ import org.hollaemor.gameofthree.gaming.storage.PlayerStore;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -74,20 +75,19 @@ public class GameService {
                     return buildStartMessageForPlayer(player);
                 }).orElseGet(
                         () -> playerStore.findAvailableForPlayer(player.getName())
-                        .map(availablePlayer -> {
-                            availablePlayer.setPrimary(true);
-                            player.setPrimary(false);
+                                .map(availablePlayer -> {
+                                    availablePlayer.setPrimary(true);
+                                    player.setPrimary(false);
 
-                            availablePlayer.setOpponent(player);
+                                    availablePlayer.setOpponent(player);
 
-                            savePlayerChanges(availablePlayer);
-                            notifyPlayer(availablePlayer.getName(), buildStartMessageForPlayer(availablePlayer));
+                                    savePlayerChanges(availablePlayer);
+                                    notifyPlayer(availablePlayer.getName(), buildStartMessageForPlayer(availablePlayer));
 
-                            return buildStartMessageForPlayer(player);
-                        }).orElseGet(() -> buildWaitingMessage())
+                                    return buildStartMessageForPlayer(player);
+                                }).orElseGet(this::buildWaitingMessage)
                 );
     }
-
 
 
     private void notifyPlayer(String playerName, GameMessage message) {
@@ -131,8 +131,9 @@ public class GameService {
     }
 
     private void checkOpponentExists(Player player) {
-        Optional.ofNullable(player.getOpponent()).
-                orElseThrow(() -> new OpponentDoesNotExistException("You have not been paired with an opponent"));
+        if (Objects.isNull(player.getOpponent())) {
+            throw new OpponentDoesNotExistException("You have not been paired with an opponent");
+        }
     }
 
     private void checkDivisibleByThree(int number) {
