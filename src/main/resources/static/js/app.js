@@ -59,7 +59,7 @@ function connect() {
         });
 
         stompClient.subscribe('/user/queue/errors', function (response) {
-            console.log(response.body);
+            showError(response.body);
         });
 
     }, showError);

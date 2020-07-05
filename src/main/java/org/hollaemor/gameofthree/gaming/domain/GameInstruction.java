@@ -1,4 +1,4 @@
-package org.hollaemor.gameofthree.gaming.datatransfer;
+package org.hollaemor.gameofthree.gaming.domain;
 
 import lombok.Builder;
 import lombok.Getter;

@@ -1,14 +1,9 @@
 package org.hollaemor.gameofthree.gaming.api;
 
-import org.hollaemor.gameofthree.gaming.datatransfer.GameInstruction;
-import org.hollaemor.gameofthree.gaming.datatransfer.GameMessage;
-import org.hollaemor.gameofthree.gaming.datatransfer.GameStatus;
-import org.hollaemor.gameofthree.gaming.exception.PlayerNotFoundException;
-import org.hollaemor.gameofthree.gaming.service.GameService;
-import org.hollaemor.gameofthree.gaming.storage.PlayerStore;
+import org.hollaemor.gameofthree.gaming.domain.*;
+import org.hollaemor.gameofthree.gaming.infrastructure.repository.PlayerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.web.server.LocalServerPort;
@@ -17,7 +12,6 @@ import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.converter.StringMessageConverter;
 import org.springframework.messaging.simp.stomp.*;
 import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
@@ -34,7 +28,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.BDDMockito.*;
 
-@ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class GameControllerIntegrationTest {
 
@@ -45,7 +38,7 @@ public class GameControllerIntegrationTest {
     private GameService gameService;
 
     @MockBean
-    private PlayerStore playerStore;
+    private PlayerRepository playerRepository;
 
     private WebSocketStompClient stompClient;
 
@@ -56,7 +49,6 @@ public class GameControllerIntegrationTest {
 
     @BeforeEach
     public void setup() {
-
         wsUrl = String.format("ws://localhost:%d/game-of-three", port);
         stompClient = new WebSocketStompClient(new SockJsClient(List.of(new WebSocketTransport(new StandardWebSocketClient()))));
         stompClient.setTaskScheduler(new ConcurrentTaskScheduler());
@@ -85,7 +77,7 @@ public class GameControllerIntegrationTest {
         var stompHeaders = new StompHeaders();
         stompHeaders.add("username", "Magneto");
 
-        given(playerStore.exists(anyString()))
+        given(playerRepository.exists(anyString()))
                 .willReturn(true);
 
         assertThatExceptionOfType(ExecutionException.class)
@@ -98,7 +90,7 @@ public class GameControllerIntegrationTest {
                     }).get();
                 });
 
-        verify(playerStore).exists(anyString());
+        verify(playerRepository).exists(anyString());
     }
 
     @Test
@@ -177,8 +169,8 @@ public class GameControllerIntegrationTest {
 
         private final Class<?> aClass;
 
-        public TestStompFrameHandler(Class clz) {
-            this.aClass = clz;
+        public TestStompFrameHandler(Class aClass) {
+            this.aClass = aClass;
         }
 
         @Override

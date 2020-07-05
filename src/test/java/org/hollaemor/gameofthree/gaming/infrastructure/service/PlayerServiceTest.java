@@ -1,10 +1,11 @@
-package org.hollaemor.gameofthree.gaming.service;
+package org.hollaemor.gameofthree.gaming.infrastructure.service;
 
-import org.hollaemor.gameofthree.gaming.datatransfer.GameMessage;
-import org.hollaemor.gameofthree.gaming.datatransfer.GameStatus;
+import org.hollaemor.gameofthree.gaming.domain.GameMessage;
+import org.hollaemor.gameofthree.gaming.domain.GameStatus;
 import org.hollaemor.gameofthree.gaming.domain.Player;
 import org.hollaemor.gameofthree.gaming.domain.PlayerStatus;
-import org.hollaemor.gameofthree.gaming.storage.PlayerStore;
+import org.hollaemor.gameofthree.gaming.infrastructure.repository.PlayerRepository;
+import org.hollaemor.gameofthree.gaming.infrastructure.service.PlayerService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
@@ -25,7 +26,7 @@ public class PlayerServiceTest {
     private SimpMessagingTemplate messagingTemplate;
 
     @Mock
-    private PlayerStore playerStore;
+    private PlayerRepository playerRepository;
 
     @InjectMocks
     private PlayerService service;
@@ -43,7 +44,7 @@ public class PlayerServiceTest {
         service.save(player);
 
         // then
-        verify(playerStore).save(player);
+        verify(playerRepository).save(player);
     }
 
 
@@ -54,7 +55,7 @@ public class PlayerServiceTest {
         var opponent = new Player("Aqua Man");
         player.setOpponent(opponent);
 
-        given(playerStore.findByName(BDDMockito.anyString()))
+        given(playerRepository.findByName(BDDMockito.anyString()))
                 .willReturn(Optional.of(player));
 
         assertThat(opponent.getStatus()).isEqualTo(PlayerStatus.PAIRED);
@@ -66,8 +67,8 @@ public class PlayerServiceTest {
         assertThat(opponent.getOpponent()).isNull();
         assertThat(opponent.getStatus()).isEqualTo(PlayerStatus.AVAILABLE);
 
-        verify(playerStore).delete(eq(player));
-        verify(playerStore).save(eq(opponent));
+        verify(playerRepository).delete(eq(player));
+        verify(playerRepository).save(eq(opponent));
 
         verify(messagingTemplate).convertAndSendToUser(eq("Aqua Man"), eq("/queue/updates"), messageCaptor.capture());
 

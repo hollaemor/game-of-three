@@ -1,14 +1,6 @@
-package org.hollaemor.gameofthree.gaming.service;
+package org.hollaemor.gameofthree.gaming.domain;
 
-import org.hollaemor.gameofthree.gaming.exception.InvalidCombinationException;
-import org.hollaemor.gameofthree.gaming.exception.OpponentDoesNotExistException;
-import org.hollaemor.gameofthree.gaming.exception.PlayerNotFoundException;
-import org.hollaemor.gameofthree.gaming.datatransfer.GameInstruction;
-import org.hollaemor.gameofthree.gaming.datatransfer.GameMessage;
-import org.hollaemor.gameofthree.gaming.datatransfer.GameStatus;
-import org.hollaemor.gameofthree.gaming.domain.Player;
-import org.hollaemor.gameofthree.gaming.service.GameService;
-import org.hollaemor.gameofthree.gaming.storage.PlayerStore;
+import org.hollaemor.gameofthree.gaming.infrastructure.repository.PlayerRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -32,7 +24,7 @@ import static org.mockito.Mockito.*;
 public class GameServiceTest {
 
     @Mock
-    private PlayerStore playerStore;
+    private PlayerRepository playerRepository;
 
     @Mock
     private SimpMessagingTemplate messagingTemplate;
@@ -47,7 +39,7 @@ public class GameServiceTest {
     @Test
     public void whenPlayerWithNameIsNotFound_Then_ThrowException() {
         // given
-        given(playerStore.findByName(anyString()))
+        given(playerRepository.findByName(anyString()))
                 .willReturn(Optional.empty());
 
         // when / then
@@ -59,10 +51,10 @@ public class GameServiceTest {
     @Test
     public void whenGameIsStarted_And_NoPlayerIsAvailable_Then_SendWaitMessage() {
         // given
-        given(playerStore.findByName(anyString()))
+        given(playerRepository.findByName(anyString()))
                 .willReturn(Optional.of(new Player("Thor")));
 
-        given(playerStore.findAvailableForPlayer(anyString()))
+        given(playerRepository.findAvailableForPlayer(anyString()))
                 .willReturn(Optional.empty());
 
         // when
@@ -70,7 +62,7 @@ public class GameServiceTest {
 
         assertThat(message.getGameStatus()).isEqualTo(GameStatus.WAITING);
         assertThat(message.getContent()).isEqualTo("Waiting for available player");
-        verify(playerStore, never()).save(any());
+        verify(playerRepository, never()).save(any());
         verifyNoInteractions(messagingTemplate);
     }
 
@@ -81,9 +73,9 @@ public class GameServiceTest {
         var player = new Player("Ant Man");
         var availablePlayer = new Player("Wasp");
 
-        given(playerStore.findByName(anyString()))
+        given(playerRepository.findByName(anyString()))
                 .willReturn(Optional.of(player));
-        given(playerStore.findAvailableForPlayer(anyString()))
+        given(playerRepository.findAvailableForPlayer(anyString()))
                 .willReturn(Optional.of(availablePlayer));
 
         // when
@@ -104,19 +96,19 @@ public class GameServiceTest {
         assertThat(availablePlayerMessage.isPrimaryPlayer()).isTrue();
         assertThat(availablePlayerMessage.getContent()).isEqualTo("Ant Man requested a game session");
 
-        verify(playerStore, times(2)).save(any());
+        verify(playerRepository, times(2)).save(any());
     }
 
 
     @Test
-    public void whenGameIsStarted_And_PlayerIsAlreadyPaired_Then_NotifyCoplayer() {
+    public void whenGameIsStarted_And_PlayerIsAlreadyPaired_Then_NotifyOpponent() {
         // given
-        var coplayer = new Player("Falcon");
+        var opponent = new Player("Falcon");
         var player = new Player("Captain America");
 
-        player.setOpponent(coplayer);
+        player.setOpponent(opponent);
 
-        given(playerStore.findByName(anyString()))
+        given(playerRepository.findByName(anyString()))
                 .willReturn(Optional.of(player));
 
         // when
@@ -127,16 +119,16 @@ public class GameServiceTest {
         assertThat(message.getGameStatus()).isEqualTo(GameStatus.START);
         assertThat(message.getOpponent()).isEqualTo("Falcon");
 
-        verify(playerStore, never()).findAvailableForPlayer(anyString());
-        verify(playerStore, never()).save(any());
+        verify(playerRepository, never()).findAvailableForPlayer(anyString());
+        verify(playerRepository, never()).save(any());
 
-        verify(messagingTemplate).convertAndSendToUser(eq("Falcon"), eq("/queue/updates"), messageCaptor.capture());
+        verify(messagingTemplate).convertAndSendToUser(eq("Falcon"), eq("/queue/updates"), any());
     }
 
     @Test
     public void processRandomNumberFromPlayer_ShouldFailIfPlayerNotFound() {
         // given
-        given(playerStore.findByName(anyString()))
+        given(playerRepository.findByName(anyString()))
                 .willReturn(Optional.empty());
 
         // when / then
@@ -148,7 +140,7 @@ public class GameServiceTest {
     @Test
     public void processRandomNumberFromPlayer_ShouldFailIfPlayerHasNotBeenPaired() {
         // given
-        given(playerStore.findByName(anyString()))
+        given(playerRepository.findByName(anyString()))
                 .willReturn(Optional.of(new Player("Hawk Eye")));
 
         // when / then
@@ -160,11 +152,11 @@ public class GameServiceTest {
     @Test
     public void processRandomNumberFromPlayer_ShouldNotifyOpponent() {
         // given
-        int randomNumber = 50;
+        var randomNumber = 50;
         var player = new Player("Loki");
         player.setOpponent(new Player("Asgard"));
 
-        given(playerStore.findByName(anyString()))
+        given(playerRepository.findByName(anyString()))
                 .willReturn(Optional.of(player));
 
         // when
@@ -194,7 +186,7 @@ public class GameServiceTest {
         // given
         var instruction = GameInstruction.builder().value(41).move(1).build();
 
-        given(playerStore.findByName(anyString()))
+        given(playerRepository.findByName(anyString()))
                 .willReturn(Optional.empty());
 
         // when / then
@@ -206,7 +198,7 @@ public class GameServiceTest {
     @Test
     public void processPlayerMove_ShouldFailIfOpponentDoesNotExist() {
         // given
-        given(playerStore.findByName(anyString()))
+        given(playerRepository.findByName(anyString()))
                 .willReturn(Optional.of(new Player("Winter Soldier")));
 
         // when / then
@@ -223,7 +215,7 @@ public class GameServiceTest {
 
         player.setOpponent(opponent);
 
-        given(playerStore.findByName(anyString()))
+        given(playerRepository.findByName(anyString()))
                 .willReturn(Optional.of(player));
 
         // when
@@ -247,7 +239,7 @@ public class GameServiceTest {
 
         player.setOpponent(opponent);
 
-        given(playerStore.findByName(anyString()))
+        given(playerRepository.findByName(anyString()))
                 .willReturn(Optional.of(player));
 
         // when

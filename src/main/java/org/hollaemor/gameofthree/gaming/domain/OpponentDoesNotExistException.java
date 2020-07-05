@@ -1,4 +1,4 @@
-package org.hollaemor.gameofthree.gaming.exception;
+package org.hollaemor.gameofthree.gaming.domain;
 
 public class OpponentDoesNotExistException  extends RuntimeException{
 

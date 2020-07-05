@@ -1,45 +1,39 @@
-package org.hollaemor.gameofthree.gaming.service;
+package org.hollaemor.gameofthree.gaming.domain;
 
 import lombok.extern.slf4j.Slf4j;
-import org.hollaemor.gameofthree.gaming.exception.InvalidCombinationException;
-import org.hollaemor.gameofthree.gaming.exception.OpponentDoesNotExistException;
-import org.hollaemor.gameofthree.gaming.exception.PlayerNotFoundException;
-import org.hollaemor.gameofthree.gaming.datatransfer.GameInstruction;
-import org.hollaemor.gameofthree.gaming.datatransfer.GameMessage;
-import org.hollaemor.gameofthree.gaming.datatransfer.GameStatus;
-import org.hollaemor.gameofthree.gaming.domain.Player;
-import org.hollaemor.gameofthree.gaming.storage.PlayerStore;
+import org.hollaemor.gameofthree.gaming.infrastructure.repository.PlayerRepository;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.Objects;
-import java.util.Optional;
+import static java.util.Optional.ofNullable;
+import static org.hollaemor.gameofthree.gaming.domain.GameMessageFactory.*;
 
-@Service
 @Slf4j
+@Service
 public class GameService {
 
     private static final String UPDATE_QUEUE = "/queue/updates";
+    private static final int DIVISOR = 3;
 
-    private final PlayerStore playerStore;
+    private final PlayerRepository playerRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
 
-    public GameService(PlayerStore playerStore, SimpMessagingTemplate messagingTemplate) {
-        this.playerStore = playerStore;
+    public GameService(PlayerRepository playerRepository, SimpMessagingTemplate messagingTemplate) {
+        this.playerRepository = playerRepository;
         this.messagingTemplate = messagingTemplate;
     }
 
     public GameMessage startForPlayer(String playerName) {
-        return playerStore.findByName(playerName)
+        return playerRepository.findByName(playerName)
                 .map(this::processStartRequestForPlayer)
                 .orElseThrow(() -> makePlayerNotFoundException(playerName));
     }
 
     public void processRandomNumberFromPlayer(int randomNumber, String playerName) {
-        playerStore.findByName(playerName)
+        playerRepository.findByName(playerName)
                 .ifPresentOrElse(player -> {
-                    checkOpponentExists(player);
+                    checkPlayerHasOpponent(player);
                     messagingTemplate.convertAndSendToUser(player.getOpponent().getName(), UPDATE_QUEUE, buildPlayMessage(randomNumber));
                 }, () -> throwPlayerNotFoundException(playerName));
     }
@@ -50,10 +44,10 @@ public class GameService {
 
         checkDivisibleByThree(addition);
 
-        playerStore.findByName(playerName).ifPresentOrElse(player -> {
-            checkOpponentExists(player);
+        playerRepository.findByName(playerName).ifPresentOrElse(player -> {
+            checkPlayerHasOpponent(player);
 
-            int newValueAfterDivision = addition / 3;
+            int newValueAfterDivision = addition / DIVISOR;
 
             logPlayerMove(playerName, gameInstruction, newValueAfterDivision);
 
@@ -69,12 +63,12 @@ public class GameService {
 
     private GameMessage processStartRequestForPlayer(Player player) {
 
-        return Optional.ofNullable(player.getOpponent())
+        return ofNullable(player.getOpponent())
                 .map(opponent -> {
                     notifyPlayer(opponent.getName(), buildStartMessageForPlayer(opponent));
                     return buildStartMessageForPlayer(player);
                 }).orElseGet(
-                        () -> playerStore.findAvailableForPlayer(player.getName())
+                        () -> playerRepository.findAvailableForPlayer(player.getName())
                                 .map(availablePlayer -> {
                                     availablePlayer.setPrimary(true);
                                     player.setPrimary(false);
@@ -85,7 +79,7 @@ public class GameService {
                                     notifyPlayer(availablePlayer.getName(), buildStartMessageForPlayer(availablePlayer));
 
                                     return buildStartMessageForPlayer(player);
-                                }).orElseGet(this::buildWaitingMessage)
+                                }).orElseGet(GameMessageFactory::buildWaitingMessage)
                 );
     }
 
@@ -95,58 +89,30 @@ public class GameService {
     }
 
     private void savePlayerChanges(Player player) {
-        playerStore.save(player);
-        Optional.ofNullable(player.getOpponent()).ifPresent(playerStore::save);
+        playerRepository.save(player);
+        ofNullable(player.getOpponent()).ifPresent(playerRepository::save);
     }
 
-    private GameMessage buildStartMessageForPlayer(Player player) {
-        return GameMessage.builder()
-                .gameStatus(GameStatus.START)
-                .opponent(player.getOpponent().getName())
-                .primaryPlayer(player.isPrimary())
-                .content(String.format("%s requested a game session", player.getOpponent().getName()))
-                .build();
-    }
 
-    private GameMessage buildWaitingMessage() {
-        return GameMessage.builder()
-                .primaryPlayer(true)
-                .gameStatus(GameStatus.WAITING)
-                .content("Waiting for available player")
-                .build();
-    }
-
-    private GameMessage buildPlayMessage(int value) {
-        return GameMessage.builder()
-                .gameStatus(GameStatus.PLAY)
-                .value(value)
-                .build();
-    }
-
-    private GameMessage buildGameOverMessage(boolean winner) {
-        return GameMessage.builder()
-                .gameStatus(GameStatus.GAMEOVER)
-                .winner(winner)
-                .build();
-    }
-
-    private void checkOpponentExists(Player player) {
-        if (Objects.isNull(player.getOpponent())) {
+    private void checkPlayerHasOpponent(Player player) {
+        if (!player.hasOpponent()) {
             throw new OpponentDoesNotExistException("You have not been paired with an opponent");
         }
     }
 
     private void checkDivisibleByThree(int number) {
-        if (number % 3 != 0) {
-            throw new InvalidCombinationException(String.format("%d is not divisible by 3", number));
+        if (number % DIVISOR != 0) {
+            throw new InvalidCombinationException(String.format("%d is not divisible by %d", number, DIVISOR));
         }
     }
 
     private void logPlayerMove(String playerName, GameInstruction gameInstruction, int updatedGameValue) {
-        log.debug("Player [{}] got value: {} and added {}. Result after division: {}",
+        log.debug("{} got value: {} and added {} to get {}. Result after division by {}: {}",
                 playerName,
                 gameInstruction.getValue(),
                 gameInstruction.getMove(),
+                gameInstruction.getValue() + gameInstruction.getMove(),
+                DIVISOR,
                 updatedGameValue);
     }
 

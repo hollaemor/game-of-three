@@ -1,10 +1,13 @@
-package org.hollaemor.gameofthree.listener;
+package org.hollaemor.gameofthree.gaming.infrastructure;
 
 import org.hollaemor.gameofthree.gaming.domain.Player;
-import org.hollaemor.gameofthree.gaming.service.PlayerService;
+import org.hollaemor.gameofthree.gaming.infrastructure.service.PlayerService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.MessageBuilder;
@@ -15,6 +18,7 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import java.util.HashMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -65,6 +69,6 @@ public class WebSocketEventListenerTest {
         listener.handleWebSocketDisconnected(sessionDisconnectEvent);
 
         // then
-        verify(playerService).removePlayer(BDDMockito.eq("Penny"));
+        verify(playerService).removePlayer(eq("Penny"));
     }
 }

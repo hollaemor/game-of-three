@@ -1,7 +1,5 @@
 package org.hollaemor.gameofthree.gaming.domain;
 
-import org.hollaemor.gameofthree.gaming.domain.Player;
-import org.hollaemor.gameofthree.gaming.domain.PlayerStatus;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -9,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class PlayerTest {
 
     @Test
-    public void whenPlayerIsCreated_Then_StatusIsReady() {
+    public void whenPlayerIsCreated_Then_StatusIsAvailable() {
         // given / when
         var player = new Player("Transformers");
 
@@ -18,6 +16,7 @@ public class PlayerTest {
         assertThat(player.getName()).isEqualTo("Transformers");
         assertThat(player.isPrimary()).isFalse();
         assertThat(player.getOpponent()).isNull();
+        assertThat(player.hasOpponent()).isFalse();
     }
 
 
@@ -35,6 +34,7 @@ public class PlayerTest {
         assertThat(player.getOpponent()).isEqualTo(opponent);
         assertThat(opponent.getStatus()).isEqualTo(PlayerStatus.PAIRED);
         assertThat(opponent.getOpponent()).isEqualTo(player);
+        assertThat(player.hasOpponent()).isTrue();
     }
 
     @Test

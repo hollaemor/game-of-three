@@ -1,6 +1,6 @@
-package org.hollaemor.gameofthree.gaming.config;
+package org.hollaemor.gameofthree.gaming.infrastructure;
 
-import org.hollaemor.gameofthree.gaming.storage.PlayerStore;
+import org.hollaemor.gameofthree.gaming.infrastructure.repository.PlayerRepository;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -16,7 +16,7 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
-import java.util.Optional;
+import static java.util.Optional.ofNullable;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -24,10 +24,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     public static final String USERNAME_HEADER = "username";
 
-    private final PlayerStore playerStore;
+    private final PlayerRepository playerRepository;
 
-    public WebSocketConfig(PlayerStore playerStore) {
-        this.playerStore = playerStore;
+    public WebSocketConfig(PlayerRepository playerRepository) {
+        this.playerRepository = playerRepository;
     }
 
     @Override
@@ -45,16 +45,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(new AuthenticatedPlayerChannelInterceptor(playerStore));
+        registration.interceptors(new AuthenticatedPlayerChannelInterceptor(playerRepository));
     }
 
 
     static class AuthenticatedPlayerChannelInterceptor implements ChannelInterceptor {
 
-        private final PlayerStore playerStore;
+        private final PlayerRepository playerRepository;
 
-        public AuthenticatedPlayerChannelInterceptor(PlayerStore playerStore) {
-            this.playerStore = playerStore;
+        public AuthenticatedPlayerChannelInterceptor(PlayerRepository playerRepository) {
+            this.playerRepository = playerRepository;
         }
 
 
@@ -63,7 +63,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
             if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-                Optional.ofNullable(accessor.getFirstNativeHeader(USERNAME_HEADER))
+                ofNullable(accessor.getFirstNativeHeader(USERNAME_HEADER))
                         .filter(username -> !StringUtils.isEmpty(username))
                         .ifPresentOrElse(username -> {
                             checkPlayerDoesNotExist(username);
@@ -75,7 +75,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         }
 
         private void checkPlayerDoesNotExist(String username) {
-            if (playerStore.exists(username)) {
+            if (playerRepository.exists(username)) {
                 throwMessagingException("Player with username already connected!!");
             }
         }

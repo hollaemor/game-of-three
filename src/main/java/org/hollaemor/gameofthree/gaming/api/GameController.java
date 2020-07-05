@@ -1,10 +1,8 @@
 package org.hollaemor.gameofthree.gaming.api;
 
-import lombok.extern.slf4j.Slf4j;
-import org.hollaemor.gameofthree.gaming.config.WebSocketConfig;
-import org.hollaemor.gameofthree.gaming.datatransfer.GameInstruction;
-import org.hollaemor.gameofthree.gaming.datatransfer.GameMessage;
-import org.hollaemor.gameofthree.gaming.service.GameService;
+import org.hollaemor.gameofthree.gaming.domain.GameInstruction;
+import org.hollaemor.gameofthree.gaming.domain.GameMessage;
+import org.hollaemor.gameofthree.gaming.domain.GameService;
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
@@ -13,8 +11,9 @@ import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
 
+import static org.hollaemor.gameofthree.gaming.infrastructure.WebSocketConfig.USERNAME_HEADER;
+
 @Controller
-@Slf4j
 public class GameController {
 
     private final GameService gameService;
@@ -26,7 +25,7 @@ public class GameController {
     @MessageMapping("/game.start")
     @SendToUser("/queue/updates")
     public GameMessage startGame(Principal principal, SimpMessageHeaderAccessor headerAccessor) {
-        headerAccessor.getSessionAttributes().put(WebSocketConfig.USERNAME_HEADER, principal.getName());
+        headerAccessor.getSessionAttributes().put(USERNAME_HEADER, principal.getName());
         return gameService.startForPlayer(principal.getName());
     }
 

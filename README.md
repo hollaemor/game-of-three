@@ -1,7 +1,7 @@
 # Game Of Three
 
 ## Requirements
-To run this application, you need:
+To run this application, you'll need:
 - Java 11 SDK
 - A modern web browser with JavaScript enabled.
 
@@ -16,7 +16,7 @@ the application's landing page.
 To connect to the _game engine_, a **username** is required to identify each connected player. Feel free to type
 any username of your choosing. Please note that no two players can have the same username.
 
-The game (application) can be played in both _automatic_ and _manual_ modes. Use the **Game Mode** dropdown to
+The game/application can be played in both _automatic_ and _manual_ modes. Use the **Game Mode** dropdown to
 specify your preferred mode. Please note that this value can be updated at any point during game play.
 
 After specifying both username and game mode, clicking **Connect** button connects you to the game engine (via a websocket).
