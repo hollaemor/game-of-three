@@ -1,13 +1,13 @@
 package org.hollaemor.gameofthree.gaming.infrastructure.service;
 
 import org.hollaemor.gameofthree.gaming.domain.GameMessage;
-import org.hollaemor.gameofthree.gaming.domain.GameMessageFactory;
 import org.hollaemor.gameofthree.gaming.domain.Player;
 import org.hollaemor.gameofthree.gaming.infrastructure.repository.PlayerRepository;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import static java.util.Optional.ofNullable;
+import static org.hollaemor.gameofthree.gaming.domain.GameMessageFactory.buildDisconnectMessage;
 
 @Service
 public class PlayerService {
@@ -39,7 +39,7 @@ public class PlayerService {
     private void updateAndNotifyPlayer(Player player) {
         ofNullable(player)
                 .ifPresent(p -> {
-                    var disconnectedMessage = GameMessageFactory.buildDisconnectMessage(p.getOpponent().getName());
+                    var disconnectedMessage = buildDisconnectMessage(p.getOpponent().getName());
                     player.removeOpponent();
                     playerRepository.save(p);
                     notifyPlayerOfDisconnect(p, disconnectedMessage);
