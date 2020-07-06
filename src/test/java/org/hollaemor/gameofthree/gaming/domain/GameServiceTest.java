@@ -171,7 +171,7 @@ public class GameServiceTest {
     }
 
     @Test
-    public void processPlayerMove_ShouldFailIfCombinationIsNotDivisibleByThree() {
+    public void processPlayerMove_ShouldFailIfCombinationIsNotDivisibleByDivisor() {
         // given
         var instruction = GameInstruction.builder().value(20).move(-1).build();
 

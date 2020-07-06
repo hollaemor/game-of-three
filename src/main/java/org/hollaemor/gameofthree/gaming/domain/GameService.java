@@ -42,7 +42,7 @@ public class GameService {
     public void processPlayerMove(String playerName, GameInstruction gameInstruction) {
         int addition = gameInstruction.getValue() + gameInstruction.getMove();
 
-        checkDivisibleByThree(addition);
+        checkDivisibleByDivisor(addition);
 
         playerRepository.findByName(playerName).ifPresentOrElse(player -> {
             checkPlayerHasOpponent(player);
@@ -100,7 +100,7 @@ public class GameService {
         }
     }
 
-    private void checkDivisibleByThree(int number) {
+    private void checkDivisibleByDivisor(int number) {
         if (number % DIVISOR != 0) {
             throw new InvalidCombinationException(String.format("%d is not divisible by %d", number, DIVISOR));
         }
