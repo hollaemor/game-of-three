@@ -34,7 +34,7 @@ public class GameService {
         playerRepository.findByName(playerName)
                 .ifPresentOrElse(player -> {
                     checkPlayerHasOpponent(player);
-                    messagingTemplate.convertAndSendToUser(player.getOpponent().getName(), UPDATE_QUEUE, buildPlayMessage(randomNumber));
+                    notifyPlayer(player.getOpponent().getName(), buildPlayMessage(randomNumber));
                 }, () -> throwPlayerNotFoundException(playerName));
     }
 
