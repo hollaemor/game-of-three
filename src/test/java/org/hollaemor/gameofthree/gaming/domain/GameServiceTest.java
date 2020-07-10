@@ -1,6 +1,7 @@
 package org.hollaemor.gameofthree.gaming.domain;
 
 import org.hollaemor.gameofthree.gaming.infrastructure.repository.PlayerRepository;
+import org.hollaemor.gameofthree.gaming.infrastructure.service.NotificationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -8,7 +9,6 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.Optional;
 
@@ -27,7 +27,7 @@ public class GameServiceTest {
     private PlayerRepository playerRepository;
 
     @Mock
-    private SimpMessagingTemplate messagingTemplate;
+    private NotificationService notificationService;
 
     @InjectMocks
     private GameService gameService;
@@ -63,7 +63,7 @@ public class GameServiceTest {
         assertThat(message.getGameStatus()).isEqualTo(GameStatus.WAITING);
         assertThat(message.getContent()).isEqualTo("Waiting for available player");
         verify(playerRepository, never()).save(any());
-        verifyNoInteractions(messagingTemplate);
+        verifyNoInteractions(notificationService);
     }
 
 
@@ -88,7 +88,7 @@ public class GameServiceTest {
         assertThat(message.getOpponent()).isEqualTo("Wasp");
         assertThat(message.isPrimaryPlayer()).isFalse();
 
-        verify(messagingTemplate).convertAndSendToUser(eq("Wasp"), eq("/queue/updates"), messageCaptor.capture());
+        verify(notificationService).notifyPlayer(eq("Wasp"), messageCaptor.capture());
 
         var availablePlayerMessage = messageCaptor.getValue();
         assertThat(availablePlayerMessage.getGameStatus()).isEqualTo(GameStatus.START);
@@ -122,7 +122,7 @@ public class GameServiceTest {
         verify(playerRepository, never()).findAvailableForPlayer(anyString());
         verify(playerRepository, never()).save(any());
 
-        verify(messagingTemplate).convertAndSendToUser(eq("Falcon"), eq("/queue/updates"), any());
+        verify(notificationService).notifyPlayer(eq("Falcon"), any());
     }
 
     @Test
@@ -163,7 +163,7 @@ public class GameServiceTest {
         gameService.processRandomNumberFromPlayer(randomNumber, player.getName());
 
         // then
-        verify(messagingTemplate).convertAndSendToUser(eq("Asgard"), eq("/queue/updates"), messageCaptor.capture());
+        verify(notificationService).notifyPlayer(eq("Asgard"), messageCaptor.capture());
 
         var message = messageCaptor.getValue();
         assertThat(message.getGameStatus()).isEqualTo(GameStatus.PLAY);
@@ -222,7 +222,7 @@ public class GameServiceTest {
         gameService.processPlayerMove("Rocket", instruction);
 
         // then
-        verify(messagingTemplate).convertAndSendToUser(eq("Groot"), anyString(), messageCaptor.capture());
+        verify(notificationService).notifyPlayer(eq("Groot"), messageCaptor.capture());
 
         var message = messageCaptor.getValue();
         assertThat(message.getGameStatus()).isEqualTo(GameStatus.PLAY);
@@ -246,8 +246,8 @@ public class GameServiceTest {
         gameService.processPlayerMove("Black Panther", instruction);
 
         // then
-        verify(messagingTemplate).convertAndSendToUser(eq("Black Panther"), anyString(), messageCaptor.capture());
-        verify(messagingTemplate).convertAndSendToUser(eq("Okoye"), anyString(), messageCaptor.capture());
+        verify(notificationService).notifyPlayer(eq("Black Panther"), messageCaptor.capture());
+        verify(notificationService).notifyPlayer(eq("Okoye"), messageCaptor.capture());
 
         assertThat(messageCaptor.getAllValues()).extracting("gameStatus")
                 .allMatch(type -> type.equals(GameStatus.GAMEOVER));

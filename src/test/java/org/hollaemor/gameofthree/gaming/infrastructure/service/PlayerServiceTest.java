@@ -5,12 +5,10 @@ import org.hollaemor.gameofthree.gaming.domain.GameStatus;
 import org.hollaemor.gameofthree.gaming.domain.Player;
 import org.hollaemor.gameofthree.gaming.domain.PlayerStatus;
 import org.hollaemor.gameofthree.gaming.infrastructure.repository.PlayerRepository;
-import org.hollaemor.gameofthree.gaming.infrastructure.service.PlayerService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.Optional;
 
@@ -23,7 +21,7 @@ import static org.mockito.Mockito.verify;
 public class PlayerServiceTest {
 
     @Mock
-    private SimpMessagingTemplate messagingTemplate;
+    private NotificationService notificationService;
 
     @Mock
     private PlayerRepository playerRepository;
@@ -70,7 +68,7 @@ public class PlayerServiceTest {
         verify(playerRepository).delete(eq(player));
         verify(playerRepository).save(eq(opponent));
 
-        verify(messagingTemplate).convertAndSendToUser(eq("Aqua Man"), eq("/queue/updates"), messageCaptor.capture());
+        verify(notificationService).notifyPlayer(eq("Aqua Man"), messageCaptor.capture());
 
         var message = messageCaptor.getValue();
         assertThat(message.getGameStatus()).isEqualTo(GameStatus.DISCONNECT);

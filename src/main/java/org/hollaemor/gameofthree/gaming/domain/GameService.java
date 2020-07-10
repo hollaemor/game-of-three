@@ -2,8 +2,10 @@ package org.hollaemor.gameofthree.gaming.domain;
 
 import lombok.extern.slf4j.Slf4j;
 import org.hollaemor.gameofthree.gaming.infrastructure.repository.PlayerRepository;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.hollaemor.gameofthree.gaming.infrastructure.service.NotificationService;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 import static java.util.Optional.ofNullable;
 import static org.hollaemor.gameofthree.gaming.domain.GameMessageFactory.*;
@@ -12,16 +14,15 @@ import static org.hollaemor.gameofthree.gaming.domain.GameMessageFactory.*;
 @Service
 public class GameService {
 
-    private static final String UPDATE_QUEUE = "/queue/updates";
     private static final int DIVISOR = 3;
 
     private final PlayerRepository playerRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+    private NotificationService notificationService;
 
 
-    public GameService(PlayerRepository playerRepository, SimpMessagingTemplate messagingTemplate) {
+    public GameService(PlayerRepository playerRepository, NotificationService notificationService) {
         this.playerRepository = playerRepository;
-        this.messagingTemplate = messagingTemplate;
+        this.notificationService = notificationService;
     }
 
     public GameMessage startForPlayer(String playerName) {
@@ -34,7 +35,7 @@ public class GameService {
         playerRepository.findByName(playerName)
                 .ifPresentOrElse(player -> {
                     checkPlayerHasOpponent(player);
-                    notifyPlayer(player.getOpponent().getName(), buildPlayMessage(randomNumber));
+                    notificationService.notifyPlayer(player.getOpponent().getName(), buildPlayMessage(randomNumber));
                 }, () -> throwPlayerNotFoundException(playerName));
     }
 
@@ -52,10 +53,10 @@ public class GameService {
             logPlayerMove(playerName, gameInstruction, newValueAfterDivision);
 
             if (newValueAfterDivision != 1) {
-                notifyPlayer(player.getOpponent().getName(), buildPlayMessage(newValueAfterDivision));
+                notificationService.notifyPlayer(player.getOpponent().getName(), buildPlayMessage(newValueAfterDivision));
             } else {
-                notifyPlayer(player.getName(), buildGameOverMessage(true));
-                notifyPlayer(player.getOpponent().getName(), buildGameOverMessage(false));
+                notificationService.notifyPlayer(player.getName(), buildGameOverMessage(true));
+                notificationService.notifyPlayer(player.getOpponent().getName(), buildGameOverMessage(false));
             }
 
         }, () -> throwPlayerNotFoundException(playerName));
@@ -64,28 +65,31 @@ public class GameService {
     private GameMessage processStartRequestForPlayer(Player player) {
 
         return ofNullable(player.getOpponent())
-                .map(opponent -> {
-                    notifyPlayer(opponent.getName(), buildStartMessageForPlayer(opponent));
-                    return buildStartMessageForPlayer(player);
-                }).orElseGet(
-                        () -> playerRepository.findAvailableForPlayer(player.getName())
-                                .map(availablePlayer -> {
-                                    availablePlayer.setPrimary(true);
-                                    player.setPrimary(false);
-
-                                    availablePlayer.setOpponent(player);
-
-                                    savePlayerChanges(availablePlayer);
-                                    notifyPlayer(availablePlayer.getName(), buildStartMessageForPlayer(availablePlayer));
-
-                                    return buildStartMessageForPlayer(player);
-                                }).orElseGet(GameMessageFactory::buildWaitingMessage)
+                .map(this::rematchWithOpponent).orElseGet(
+                        () -> pairPlayerWithAvailablePlayer(player).orElseGet(GameMessageFactory::buildWaitingMessage)
                 );
     }
 
 
-    private void notifyPlayer(String playerName, GameMessage message) {
-        messagingTemplate.convertAndSendToUser(playerName, UPDATE_QUEUE, message);
+    private GameMessage rematchWithOpponent(Player player) {
+        notificationService.notifyPlayer(player.getName(), buildStartMessageForPlayer(player));
+        return buildStartMessageForPlayer(player.getOpponent());
+    }
+
+    private Optional<GameMessage> pairPlayerWithAvailablePlayer(Player player) {
+        return playerRepository.findAvailableForPlayer(player.getName())
+                .map(availablePlayer -> {
+
+                    availablePlayer.setPrimary(true);
+                    player.setPrimary(false);
+
+                    availablePlayer.setOpponent(player);
+
+                    savePlayerChanges(availablePlayer);
+                    notificationService.notifyPlayer(availablePlayer.getName(), buildStartMessageForPlayer(availablePlayer));
+
+                    return buildStartMessageForPlayer(player);
+                });
     }
 
     private void savePlayerChanges(Player player) {
