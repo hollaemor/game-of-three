@@ -17,7 +17,7 @@ public class GameService {
     private static final int DIVISOR = 3;
 
     private final PlayerRepository playerRepository;
-    private NotificationService notificationService;
+    private final NotificationService notificationService;
 
 
     public GameService(PlayerRepository playerRepository, NotificationService notificationService) {

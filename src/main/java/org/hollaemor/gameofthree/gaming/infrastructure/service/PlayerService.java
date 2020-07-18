@@ -13,7 +13,7 @@ public class PlayerService {
 
 
     private final PlayerRepository playerRepository;
-    private NotificationService notificationService;
+    private final NotificationService notificationService;
 
 
     public PlayerService(PlayerRepository playerRepository, NotificationService notificationService) {
